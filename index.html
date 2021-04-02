@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+      <head>
+            <title> OSM Map </title>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href='https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.css' rel='stylesheet' />
+            <script src='https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.js'></script>
+            <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+
+      <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+}
+ </style>
+      </head>
+      <body>
+
+        <style>
+  .info-box {
+    height: 100px;
+    width: 150px;
+    position: absolute;
+    top: 20px;
+    left: 10px;
+    background-color: rgba(255, 255, 255, .9);
+    padding: 15px;
+    text-align: left;
+    font-family: 'Arial';
+    margin: 0;
+    font-size: 13px;
+  }
+</style>
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.0/mapbox-gl-draw.js'></script>
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.0/mapbox-gl-draw.css' type='text/css'/>
+<div id='map'></div>
+<div class='info-box'>
+  <p>Draw your route using the draw tools </p>
+  <div id='calculated-line'></div>
+</div>
+
+        <div id="map"style="width: 1900px; height: 600px;"></div>
+
+        <script src="school.js" type="text/javascript"></script>
+        <script>
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic3VkYW1mZXJuYW5kbyIsImEiOiJja20xb2M4Ymowa2l4MnhxdG54em4xcWtzIn0.LJjx0EIijx9z2l618Z4V-w';
+        var map = new mapboxgl.Map({
+        container: 'map', // container id
+      style: 'mapbox://styles/mapbox/light-v10',  // style URL
+        center: [-114.0719,51.0447], // starting position [lng, lat]
+        zoom: 11 // starting zoom
+        });
+
+  var draw = new MapboxDraw({
+  displayControlsDefault: false,
+  controls: {
+    line_string: true,
+    trash: true
+  },
+  styles: [
+    // ACTIVE (being drawn)
+    // line stroke
+    {
+      "id": "gl-draw-line",
+      "type": "line",
+      "filter": ["all", ["==", "$type", "LineString"], ["!=", "mode", "static"]],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#3b9ddd",
+        "line-dasharray": [0.2, 2],
+        "line-width": 4,
+        "line-opacity": 0.7
+      }
+    },
+    // vertex point halos
+    {
+      "id": "gl-draw-polygon-and-line-vertex-halo-active",
+      "type": "circle",
+      "filter": ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"], ["!=", "mode", "static"]],
+      "paint": {
+        "circle-radius": 10,
+        "circle-color": "#FFF"
+      }
+    },
+    // vertex points
+    {
+      "id": "gl-draw-polygon-and-line-vertex-active",
+      "type": "circle",
+      "filter": ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"], ["!=", "mode", "static"]],
+      "paint": {
+        "circle-radius": 6,
+        "circle-color": "#3b9ddd",
+      }
+    },
+  ]
+});
+
+// add the draw tool to the map
+map.addControl(draw);
+
+function updateRoute() {
+  removeRoute(); // overwrite any existing layers
+  var data = draw.getAll();
+
+  //simply options here
+  var options = {tolerance: 0.01, highQuality: false};
+  var simplified = turf.simplify(geojson, options);
+  getMatch(simplified);
+}
+
+function addRoute (coords) {
+  // check if the route is already loaded
+  if (map.getSource('route')) {
+    map.removeLayer('route')
+    map.removeSource('route')
+  } else{
+    map.addLayer({
+      "id": "route",
+      "type": "line",
+      "source": {
+        "type": "geojson",
+        "data": {
+          "type": "Feature",
+          "properties": {},
+          "geometry": coords
+        }
+      },
+      "layout": {
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#3b9ddd",
+        "line-width": 8,
+        "line-opacity": 0.8
+      }
+    });
+  };
+}
+
+function removeRoute () {
+  if (map.getSource('route')) {
+    map.removeLayer('route');
+    map.removeSource('route');
+    document.getElementById('calculated-line').innerHTML = '';
+  } else  {
+    return;
+  }
+}
+
+
+
+map.on('draw.create', updateRoute);
+map.on('draw.update', updateRoute);
+map.on('draw.delete', removeRoute);
+</script>
+
+      </body>
+
+
+
+
+</html>
